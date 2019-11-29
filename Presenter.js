@@ -2,7 +2,10 @@ class Presenter {
 
     constructor (canvasID, gameArea) {
 
+        this._ballSelector = new BallSelector (gameArea);
         this._lineWidth  = 1;
+        this._selectedColor = "#000000";
+        this._selectedWidth = 3;
 
         this._gridColor  = "#000000";
         this._bgColor    = "#FFFFFF";
@@ -80,20 +83,41 @@ class Presenter {
                 const val = this._gameArea.cell (i, j);
                 if (val > 0) {
 
-                    const x = i * this._cellWidth  + this._cellWidth  / 2;
-                    const y = j * this._cellHeight + this._cellHeight / 2;
-
-                    this._context.beginPath ();
+                   
                     this._context.strokeStyle = this._ballColors [val - 1];
                     this._context.lineWidth   = 1;
+                                    
+                    const x = i * this._cellWidth  + this._cellWidth  / 2;
+                    const y = j * this._cellHeight + this._cellHeight / 2;
+                    this._context.beginPath ();
                     this._context.arc (x, y, this._ballRadius, 0, 2 * Math.PI);
                     this._context.fillStyle   = this._ballColors [val - 1];
                     this._context.fill ();
+
+                    if (this._ballSelector.isSelected (new Cell (i, j))) {
+
+                        this._context.strokeStyle = this._selectedColor;
+                        this._context.lineWidth   = this._selectedWidth;
+                        this._context.arc (x, y, this._ballRadius, 0, 2 * Math.PI);
+                        this._context.stroke ();
+                    } 
                 }
             }
         }
     }
 
+    getCellAt (x, y) {
+
+        let col = Math.floor (x / this._cellWidth);
+        let row = Math.floor (y / this._cellHeight);
+
+        if (col < 0 || col >= this._gameArea.cols ())
+            col = undefined;
+        if (row < 0 || row >= this._gameArea.rows ())
+            row = undefined;
+
+        return new Cell (col, row);
+    }
     
     draw () {
     
@@ -103,8 +127,11 @@ class Presenter {
         this.drawBalls  ();
     }
 
-    onCanvasClick () {
+    onCanvasClick (event) {
 
+        console.log (event);
+        const cell = this.getCellAt (event.layerX, event.layerY);
+        this._ballSelector.onCellClicked (cell);
         this._gameArea.distribute (5);
         this.draw ();
     }

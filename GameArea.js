@@ -1,5 +1,33 @@
 //Game Area represents the game model
 
+class Cell {
+
+    constructor (col = undefined, row = undefined) {
+
+        this._col = col;
+        this._row = row;
+    }
+
+    get col () {
+
+        return this._col;        
+    }
+
+    get row () {
+
+        return this._row;
+    }
+
+    set col (cellCol) {
+
+        this._col = cellCol;
+    }
+
+    set row (cellRow) {
+
+        this._row = cellRow;
+    }
+ };
 class GameArea  {
 
     constructor () {
