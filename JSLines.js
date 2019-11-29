@@ -1,6 +1,12 @@
 //main game file
 
 
-let gameArea = new GameArea ();
+let gameArea  = new GameArea ();
+let presenter = new Presenter ("jslines", gameArea);
 
-console.log (gameArea.cols ());
+gameArea.distribute (5);
+presenter.draw ();
+
+console.log (gameArea.cols   ());
+console.log (presenter.width ());
+console.log (presenter._width);
