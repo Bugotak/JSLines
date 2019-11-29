@@ -23,7 +23,7 @@ class Presenter {
         this._cellHeight = this._height / this._gameArea.rows ();
         this._ballRadius = (Math.min (this._cellWidth, this._cellHeight) / 2) * 0.8;
 
-        this._gameArea.distribute (5);
+        this._gameArea.distribute (1);
 
         this._canvas.addEventListener ("click", this.onCanvasClick.bind (this));
     }
@@ -132,8 +132,7 @@ class Presenter {
         console.log (event);
         const cell = this.getCellAt (event.layerX, event.layerY);
         this._ballSelector.onCellClicked (cell);
-        this._gameArea.distribute (5);
-        this.draw ();
+        this.draw ();        
     }
     
 }

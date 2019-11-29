@@ -31,8 +31,8 @@ class Cell {
 class GameArea  {
 
     constructor () {
-        this._cols      = 10;
-        this._rows      = 10;
+        this._cols      = 3;
+        this._rows      = 3;
         this._typeCount = 5;
 
         this._cells = new Array (this._cols);
@@ -68,9 +68,14 @@ class GameArea  {
     }
 
 
-    isCellFree (col, row) {
+    isCellFree (cell) {
 
-        return (this._cells [col][row] == 0);
+        return (this._cells [cell.col][cell.row] === 0);
+    }
+
+    isInArea (cell) {
+
+        return (cell.col >= 0 && cell.col < this._cols && cell.row >= 0 && cell.row < this._rows);
     }
 
     getFreeCells () {
@@ -86,6 +91,51 @@ class GameArea  {
         }
         return res;
 
+    }
+
+    getFreeNeighbourCells (cell) {
+
+        let res = new Array ();
+
+        for (let col = cell.col - 1; col <= cell.col + 1; ++col) {
+            for (let row = cell.row - 1; row <= cell.row + 1; ++row) {
+
+                if (col === cell.col && row === cell.row) 
+                    continue;
+                const neighbour_cell = new Cell (col, row);
+                if (this.isInArea (neighbour_cell) && this.isCellFree (neighbour_cell)) {
+
+                    res.push (neighbour_cell);
+                }
+                
+            }
+        }
+        return res;
+    }
+
+    getPath (start, end) {
+
+        let frontier  = new Array ();
+        let came_from = new WeakMap ();
+
+        frontier.push (start);
+        came_from [start] = undefined;
+        while (frontier.length > 0) {
+
+            let current  = frontier.pop ();
+            let neibours = this.getFreeNeighbourCells (current);
+            for (let i in neibours) {
+
+                let next = neibours [i];
+                if (!came_from.has (next)) {
+                    frontier.unshift (next);
+                    came_from [next] = current;
+                }
+
+            }
+        }
+        console.log (came_from);
+        return came_from;
     }
 
     distribute (count) {

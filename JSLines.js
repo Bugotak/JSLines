@@ -4,7 +4,6 @@
 let gameArea  = new GameArea ();
 let presenter = new Presenter ("jslines", gameArea);
 
-gameArea.distribute (5);
 presenter.draw ();
 
 console.log (gameArea.cols   ());
