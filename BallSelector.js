@@ -4,31 +4,34 @@ class BallSelector {
     constructor (gameArea) {
 
         this._gameArea = gameArea;
-        this._selected = new Cell ();
+        this._selected = undefined;
     }
 
     onCellClicked (cell) {
 
-        if (!this._gameArea.isCellFree (cell)) {
-            this._selected.col = cell.col;
-            this._selected.row = cell.row;
+        if (!cell.isFree ()) {
+         
+            this._selected = cell;
+
         } else if (this.haveSelected ()) {
 
             this._gameArea.getPath (this._selected, cell);
+            
+        } else {
+
+            this._selected = undefined;
         }
-
-
     }
 
     isSelected (cell) {
 
-        const res =  (this._selected.col === cell.col && this._selected.row === cell.row);
+        const res =  (this._selected == cell);
         return res;
     }
 
     haveSelected () {
 
-        const res =  (this._selected.col != undefined && this._selected.row != undefined);
+        const res =  (this._selected != undefined);
         return res;
     }
 

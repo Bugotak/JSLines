@@ -80,21 +80,21 @@ class Presenter {
 
             for (let j = 0; j < this._gameArea.rows (); ++j) {               
 
-                const val = this._gameArea.cell (i, j);
-                if (val > 0) {
+                const cell = this._gameArea.cells (i, j);
+                if (cell.value > 0) {
 
                    
-                    this._context.strokeStyle = this._ballColors [val - 1];
+                    this._context.strokeStyle = this._ballColors [cell.value - 1];
                     this._context.lineWidth   = 1;
                                     
                     const x = i * this._cellWidth  + this._cellWidth  / 2;
                     const y = j * this._cellHeight + this._cellHeight / 2;
                     this._context.beginPath ();
                     this._context.arc (x, y, this._ballRadius, 0, 2 * Math.PI);
-                    this._context.fillStyle   = this._ballColors [val - 1];
+                    this._context.fillStyle   = this._ballColors [cell.value - 1];
                     this._context.fill ();
 
-                    if (this._ballSelector.isSelected (new Cell (i, j))) {
+                    if (this._ballSelector.isSelected (cell)) {
 
                         this._context.strokeStyle = this._selectedColor;
                         this._context.lineWidth   = this._selectedWidth;
@@ -111,12 +111,7 @@ class Presenter {
         let col = Math.floor (x / this._cellWidth);
         let row = Math.floor (y / this._cellHeight);
 
-        if (col < 0 || col >= this._gameArea.cols ())
-            col = undefined;
-        if (row < 0 || row >= this._gameArea.rows ())
-            row = undefined;
-
-        return new Cell (col, row);
+        return this._gameArea.cells (col, row);
     }
     
     draw () {
