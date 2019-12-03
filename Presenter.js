@@ -2,7 +2,7 @@ class Presenter {
 
     constructor (canvasID, gameArea) {
 
-        this._ballSelector = new BallSelector (gameArea);
+        this._ballSelector = new BallSelector (gameArea, this);
         this._lineWidth  = 1;
         this._selectedColor = "#000000";
         this._selectedWidth = 3;
@@ -23,9 +23,10 @@ class Presenter {
         this._cellHeight = this._height / this._gameArea.rows ();
         this._ballRadius = (Math.min (this._cellWidth, this._cellHeight) / 2) * 0.8;
 
-        this._gameArea.distribute (1);
+        this._gameArea.distribute (5);
 
         this._canvas.addEventListener ("click", this.onCanvasClick.bind (this));
+        this._gameArea.onDrawCallback = this.draw.bind (this);
     }
     
 
@@ -126,8 +127,7 @@ class Presenter {
 
         console.log (event);
         const cell = this.getCellAt (event.layerX, event.layerY);
-        this._ballSelector.onCellClicked (cell);
-        this.draw ();        
+        this._ballSelector.onCellClicked (cell);    
     }
     
 }

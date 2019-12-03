@@ -65,13 +65,18 @@ class Cell {
 
         this._pathFrom = cell;
     }
+
+    clearValue () {
+
+        this._value = 0;
+    }
  };
 class GameArea  {
 
     constructor () {
-        this._cols      = 3;
-        this._rows      = 3;
-        this._typeCount = 5;
+        this._cols      = 10;
+        this._rows      = 10;
+        this._typeCount = 6;
 
         this._cells = new Array (this._cols);
 
@@ -81,7 +86,6 @@ class GameArea  {
             for (let row = 0; row < this._rows; ++row)
                 this._cells [col][row] = new Cell  (col, row);
         }
-
     };
 
     cols () {
@@ -106,6 +110,11 @@ class GameArea  {
         if (this.isInArea (col, row))
             return this._cells [col][row];
         return null;
+    }
+
+    set onDrawCallback (cb) {
+
+        this._onDrawCallback = cb;
     }
 
     randomInt (minVal, maxVal) {
@@ -166,6 +175,7 @@ class GameArea  {
 
     getPath (start, end) {
 
+        let path = new Array ();
         this.resetPaths ();      
         
         let frontier  = new Array ();
@@ -175,8 +185,7 @@ class GameArea  {
 
             let current  = frontier.pop ();
             if (current == end) {
-
-                let path = new Array ();
+               
                 let prev = end;
                 while (prev != start) {
 
@@ -185,7 +194,7 @@ class GameArea  {
                 }
                 path.reverse ();
                 console.log (path);
-                return path;
+                break;
             }
 
             let neibours = this.getFreeUnvisitedNeighbourCells (current);
@@ -198,17 +207,7 @@ class GameArea  {
                 next.pathFrom = current;
             }
         }        
-        return undefined;
-    }
-
-    moveBall (start, end) {
-
-        const path = getPath (start, end);
-        const val  = start.value;
-        for (let i in path) {
-
-            
-        }
+        return path;
     }
 
     distribute (count) {
@@ -223,4 +222,6 @@ class GameArea  {
             free_cells.splice (cell_index, 1);
         }    
     }
+
+    get
 }
