@@ -17,7 +17,7 @@ class MoveAnimation {
             
             clearTimeout  ();
             this._isRunning = false;
-            this._onFinish ();
+            this._onFinish (this._to);
             return;
         }
         
@@ -108,8 +108,10 @@ class BallSelector {
         this._presenter.draw ();
     }
 
-    onMoveFinish () {
+    onMoveFinish (cell) {
 
+        let lines = this._gameArea.getColorLines (cell);
+        console.log (lines);
         this._gameArea.distribute (5);
         this._presenter.draw ();
     }

@@ -74,9 +74,10 @@ class Cell {
 class GameArea  {
 
     constructor () {
-        this._cols      = 10;
-        this._rows      = 10;
-        this._typeCount = 6;
+        this._cols      = 9;
+        this._rows      = 9;
+        this._typeCount = 7;
+        this._minLineLength = 5;
 
         this._cells = new Array (this._cols);
 
@@ -193,7 +194,6 @@ class GameArea  {
                     prev = prev.pathFrom;
                 }
                 path.reverse ();
-                console.log (path);
                 break;
             }
 
@@ -223,5 +223,42 @@ class GameArea  {
         }    
     }
 
-    get
+    getColorLines (cell) {
+
+        let res  = new Array ();
+        let line = [cell];
+
+        this.getColorLine (cell, -1, 0, line);
+        this.getColorLine (cell, +1, 0, line);
+        if (line.length > this._minLineLength)
+            res.push (...line);
+        line = [cell];
+
+        this.getColorLine (cell, 0, -1, line);
+        this.getColorLine (cell, 0, +1, line);
+        if (line.length > this._minLineLength)
+            res.push (...line);
+        line = [cell];
+
+        return res;
+    }
+
+    getColorLine (cell, colInc, rowInc, res) {        
+        
+        let col = cell.col + colInc;
+        let row = cell.row + rowInc;
+        if (!this.isInArea (col, row))
+            return;
+        
+        const val    = cell.value;
+        let next_val = val;       
+
+        while (next_val === val && this.isInArea (col, row)) {
+
+            res.push (this.cells (col, row));
+            next_val = this.cellValue (col, row);
+            col += colInc;
+            row += rowInc;        
+        }
+    }
 }
