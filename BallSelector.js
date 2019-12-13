@@ -131,8 +131,7 @@ class BallSelector {
 
     reset () {
 
-        this._selected._col = undefined;
-        this._selected._row = undefined;
+        this._selected =  undefined;        
     }
 
     async moveBallTo (cell) {
@@ -150,8 +149,8 @@ class BallSelector {
             lines = this._gameArea.getColorLines (ball);
             await this._destroyAnimation.run (lines);    
         }  
-        reset ();     
         this._presenter.draw (); 
+        this.reset ();
     }
 
     onMoveStep () {
