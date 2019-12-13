@@ -1,45 +1,77 @@
 
 
+function delay (ms) {
+    return new Promise (resolve => setTimeout (resolve, ms));
+}
+
 class MoveAnimation {
 
-    constructor (gameArea, onSingleStep, onFinish) {
+    constructor (gameArea, onSingleStep) {
 
         this._gameArea     = gameArea;
         this._delay        = 50;
         this._onSingleStep = onSingleStep;
-        this._onFinish     = onFinish;
         this._isRunning    = false;
     }
 
-    singleStep () {
-
-        if (this._path.length == 0) {
-            
-            clearTimeout  ();
-            this._isRunning = false;
-            this._onFinish (this._to);
-            return;
-        }
+    async singleStep () {
         
+        await delay (this._delay);
+
         this._to = this._path.shift ();
+        this._to.value = this._from.value;
         this._from.clearValue ();        
-        this._to.value = this._value;
 
         this._onSingleStep ();
 
         this._from = this._to;        
-        setTimeout (this.singleStep.bind (this), this._delay)
     }
 
-    run (start, path) {
+    async run (path) {
 
-        if (path.length == 0)
-            return;
         this._isRunning = true;
         this._path  = path;
-        this._from  = start;
-        this._value = start.value;
-        setTimeout (this.singleStep.bind (this), this._delay);
+        this._from  = this._path.shift ();
+
+        while (this._path.length > 0) {
+            
+            await this.singleStep ();       
+        } 
+        this._isRunning = false;
+    }
+
+    get isRunning () {
+
+        return this._isRunning;
+    }
+}
+
+class LineDestroyAnimation {
+
+    constructor (gameArea, onSingleStep) {
+
+        this._gameArea = gameArea;  
+        this._delay        = 50;
+        this._onSingleStep = onSingleStep;
+        this._isRunning    = false;      
+    }
+
+    async singleStep () {
+      
+        await delay (this._delay);
+
+        let ball = this._lines.shift ();
+        ball.clearValue ();        
+        this._onSingleStep ();
+    }
+
+    async run (lines) {
+
+        this._isRunning = true;
+        this._lines = lines;
+        while (this._lines.length > 0)
+            await this.singleStep ();
+        this._isRunning = false;
     }
 
     get isRunning () {
@@ -54,13 +86,19 @@ class BallSelector {
 
         this._gameArea  = gameArea;
         this._presenter = presenter;
-        this._moveAnimation = new MoveAnimation (this._gameArea, this.onMoveStep.bind (this), this.onMoveFinish.bind (this));            
+        this._moveAnimation    = new MoveAnimation        (this._gameArea, this.onMoveStep.bind    (this));  
+        this._destroyAnimation = new LineDestroyAnimation (this._gameArea, this.onDestroyStep.bind (this));           
         this._selected  = undefined;
+    }
+
+    isAnimationRunning () {
+
+        return (this._moveAnimation.isRunning || this._destroyAnimation.isRunning);
     }
 
     onCellClicked (cell) {
 
-        if (this._moveAnimation.isRunning)
+        if (this.isAnimationRunning ())
             return;
 
         if (!cell.isFree ()) {
@@ -97,10 +135,23 @@ class BallSelector {
         this._selected._row = undefined;
     }
 
-    moveBallTo (cell) {
+    async moveBallTo (cell) {
 
-        let path = this._gameArea.getPath (this._selected, cell);
-        this._moveAnimation.run (this._selected, path);        
+        let path = this._gameArea.getPath (this._selected, cell); 
+        await this._moveAnimation.run (path);  
+        let lines = this._gameArea.getColorLines (cell);
+        await this._destroyAnimation.run (lines);
+        let new_balls = this._gameArea.distribute (3);     
+
+        this._presenter.draw ();
+
+        for (let ball of new_balls) {
+
+            lines = this._gameArea.getColorLines (ball);
+            await this._destroyAnimation.run (lines);    
+        }  
+        reset ();     
+        this._presenter.draw (); 
     }
 
     onMoveStep () {
@@ -108,11 +159,14 @@ class BallSelector {
         this._presenter.draw ();
     }
 
-    onMoveFinish (cell) {
+    deleteColorLines (cell) {
 
         let lines = this._gameArea.getColorLines (cell);
-        console.log (lines);
-        this._gameArea.distribute (5);
+        this._destroyAnimation.run (lines);
+    }
+   
+    onDestroyStep () {
+
         this._presenter.draw ();
     }
 }

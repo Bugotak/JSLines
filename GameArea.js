@@ -194,6 +194,7 @@ class GameArea  {
                     prev = prev.pathFrom;
                 }
                 path.reverse ();
+                path.unshift (start);
                 break;
             }
 
@@ -214,51 +215,65 @@ class GameArea  {
 
         let free_cells = this.getFreeCells ();
         count = Math.min (count, free_cells.length);
+        let res = new Array ();
+
         for (let i = 0; i < count; ++i) {
 
             let cell_index = this.randomInt (0, free_cells.length - 1);
             let cell_type  = this.randomInt (1, this._typeCount);
-            free_cells [cell_index].value = cell_type;
+            let cell       = free_cells [cell_index];
+            cell.value     = cell_type;
             free_cells.splice (cell_index, 1);
+            res.push (cell);
         }    
+        return res;
     }
 
     getColorLines (cell) {
 
         let res  = new Array ();
-        let line = [cell];
 
-        this.getColorLine (cell, -1, 0, line);
-        this.getColorLine (cell, +1, 0, line);
-        if (line.length > this._minLineLength)
-            res.push (...line);
-        line = [cell];
+        this.getLineInDirection (cell, 1, 0,  res);
+        this.getLineInDirection (cell, 0, 1,  res);
+        this.getLineInDirection (cell, 1, 1,  res);
+        this.getLineInDirection (cell, 1, -1, res);
 
-        this.getColorLine (cell, 0, -1, line);
-        this.getColorLine (cell, 0, +1, line);
-        if (line.length > this._minLineLength)
-            res.push (...line);
-        line = [cell];
-
+        if (res.length > 0) {
+            res.push (cell);
+        }
         return res;
+    }    
+
+    getLineInDirection (cell, colInc, rowInc, res) {
+
+        let a = this.getSubLine (cell, colInc,   rowInc);
+        let b = this.getSubLine (cell, -colInc, -rowInc);
+
+        if (a.length + b.length + 1 >= this._minLineLength) {
+          
+            res.push (...a);
+            res.push (...b);
+        }
     }
 
-    getColorLine (cell, colInc, rowInc, res) {        
+    getSubLine (cell, colInc, rowInc) {        
         
         let col = cell.col + colInc;
         let row = cell.row + rowInc;
+        let res = new Array ();
+
         if (!this.isInArea (col, row))
-            return;
-        
+            return res;            
         const val    = cell.value;
-        let next_val = val;       
+        let next_val = this.cellValue (col, row);       
 
         while (next_val === val && this.isInArea (col, row)) {
 
             res.push (this.cells (col, row));
-            next_val = this.cellValue (col, row);
             col += colInc;
             row += rowInc;        
-        }
+            next_val = this.cellValue (col, row);
+        }    
+        return res;
     }
 }
