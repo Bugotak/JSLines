@@ -104,7 +104,7 @@ class BallSelector {
         if (!cell.isFree ()) {
          
             this._selected = cell;
-            this._presenter.draw ();
+            this._presenter.animateSelected (this._selected);
 
         } else if (this.haveSelected ()) {
 
@@ -113,7 +113,7 @@ class BallSelector {
         } else {
 
             this._selected = undefined;
-            this._presenter.draw ();
+            this._presenter.stopAnimateSelected ();
         }
     }
 
@@ -132,10 +132,13 @@ class BallSelector {
     reset () {
 
         this._selected =  undefined;        
+        this._presenter.stopAnimateSelected ();
     }
 
     async moveBallTo (cell) {
 
+        this._presenter.stopAnimateSelected ();
+        
         let path = this._gameArea.getPath (this._selected, cell); 
         await this._moveAnimation.run (path);  
         let lines = this._gameArea.getColorLines (cell);

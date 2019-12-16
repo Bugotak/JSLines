@@ -1,11 +1,73 @@
+
+
+
+function delay (ms) {
+    return new Promise (resolve => setTimeout (resolve, ms));
+}
+
+class SelectedAnimation {
+
+    constructor (presenter) {
+
+        this._presenter = presenter;
+        this._cell      = null;
+        this._delay     = 10;
+        this._timer     = null;
+        this._shift     = 0;
+        this._maxShift  = 0;
+        this._shiftInc  = 1;
+    }    
+
+    run (cell) {
+
+        if (cell != this._cell)
+            this.stop ();
+
+        if (cell == null)
+            return;
+
+        this._cell = cell;
+
+        let rect   = this._presenter.getCellRect (this._cell);
+               
+        this._maxShift = rect.height / 2 - this._presenter.ballRadius;
+        this._timer    = setInterval (this.stepShift.bind (this), 50);
+    }
+
+    stop () {
+
+        this._cell = null;
+        this.shift = 0;
+        this._maxShift  = 0;
+        this._shiftInc  = 1;
+        clearInterval (this._timer);
+    }
+
+    stepShift () {
+
+        this._shift += this._shiftInc;
+        this._presenter.clearCell  (this._cell);
+        this._presenter.drawBallAt (this._cell, 0, this._shift);
+
+        if (this._shift >= this._maxShift) {
+
+            this._shiftInc = -1;
+        }
+        if (this._shift <= 0) {
+
+            this._shiftInc = 1;
+        }
+    }
+}
+
+
 class Presenter {
 
     constructor (canvasID, gameArea) {
 
-        this._ballSelector = new BallSelector (gameArea, this);
+        this._ballSelector      = new BallSelector  (gameArea, this);
+        this._selectedAnimation = new SelectedAnimation (this); 
         this._lineWidth  = 1;
-        this._selectedColor = "#000000";
-        this._selectedWidth = 3;
 
         this._gridColor  = "#000000";
         this._bgColor    = "#FFFFFF";
@@ -30,14 +92,19 @@ class Presenter {
     }
     
 
-    width () {
+    get width () {
 
         return this._width;        
     }
 
-    height () {
+    get height () {
 
          return this._height;
+    }
+
+    get ballRadius () {
+
+        return this._ballRadius;
     }
 
     clearImage () {
@@ -82,29 +149,38 @@ class Presenter {
             for (let j = 0; j < this._gameArea.rows (); ++j) {               
 
                 const cell = this._gameArea.cells (i, j);
-                if (cell.value > 0) {
+                if (cell.value > 0 && !this._ballSelector.isSelected (cell)) {
 
-                   
-                    this._context.strokeStyle = this._ballColors [cell.value - 1];
-                    this._context.lineWidth   = 1;
-                                    
-                    const x = i * this._cellWidth  + this._cellWidth  / 2;
-                    const y = j * this._cellHeight + this._cellHeight / 2;
-                    this._context.beginPath ();
-                    this._context.arc (x, y, this._ballRadius, 0, 2 * Math.PI);
-                    this._context.fillStyle   = this._ballColors [cell.value - 1];
-                    this._context.fill ();
-
-                    if (this._ballSelector.isSelected (cell)) {
-
-                        this._context.strokeStyle = this._selectedColor;
-                        this._context.lineWidth   = this._selectedWidth;
-                        this._context.arc (x, y, this._ballRadius, 0, 2 * Math.PI);
-                        this._context.stroke ();
-                    } 
+                    this.drawBallAt (cell);
                 }
             }
         }
+    }
+
+    drawBallAt (cell, ...shift) {
+      
+        let x = this._cellWidth  * (cell.col + 0.5);
+        let y = this._cellHeight * (cell.row + 0.5);
+        if (shift.length >= 2) {
+
+            x += shift [0];
+            y += shift [1];
+        }
+
+        this._context.strokeStyle = this._ballColors [cell.value - 1];
+        this._context.lineWidth   = 1;
+
+        this._context.beginPath ();
+        this._context.arc (x, y, this._ballRadius, 0, 2 * Math.PI);
+        this._context.fillStyle   = this._ballColors [cell.value - 1];
+        this._context.fill ();
+    } 
+
+    clearCell (cell) {
+
+        let rect = this.getCellRect (cell);
+        this._context.fillStyle = this._bgColor;
+        this._context.clearRect (rect.x0, rect.y0, rect.width, rect.height);
     }
 
     getCellAt (x, y) {
@@ -113,6 +189,14 @@ class Presenter {
         let row = Math.floor (y / this._cellHeight);
 
         return this._gameArea.cells (col, row);
+    }
+
+    getCellRect (cell) {
+
+        return { x0     : cell.col * this._cellWidth  + this._lineWidth,
+                 y0     : cell.row * this._cellHeight + this._lineWidth,
+                 width  : this._cellWidth  - 2 * this._lineWidth,
+                 height : this._cellHeight - 2 * this._lineWidth};
     }
     
     draw () {
@@ -129,5 +213,14 @@ class Presenter {
         const cell = this.getCellAt (event.layerX, event.layerY);
         this._ballSelector.onCellClicked (cell);    
     }
-    
+
+    animateSelected (cell) {
+
+        this._selectedAnimation.run (cell);
+    }    
+
+    stopAnimateSelected () {
+
+        this._selectedAnimation.stop ();
+    }    
 }
