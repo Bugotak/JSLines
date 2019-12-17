@@ -4,11 +4,49 @@ class Cell {
 
     constructor (col = undefined, row = undefined) {
 
-        this._col      = col;
-        this._row      = row;
-        this._value    = 0;
-        this._visited  = false;
-        this._pathFrom = undefined;
+        this._col       = col;
+        this._row       = row;
+        this._visited   = false;
+        this._pathFrom  = undefined;
+        this.haveBall   = false;
+        this.colorIndex = 0;
+    }
+
+    get haveBall () {
+
+        return this._haveBall;
+    }
+
+    set haveBall (have) {
+
+        this._haveBall = have;
+    }
+
+    get colorIndex () {
+
+        return this._colorIndex;
+    }
+
+    set colorIndex (index) {
+
+        this._colorIndex = index;
+    }
+
+    sameBall (cell) {
+
+        return (cell != null && this.haveBall === cell.haveBall && this.colorIndex === cell.colorIndex);
+    }
+
+    clear () {
+
+        this._haveBall   = false;
+        this._colorIndex = 0;
+    }
+
+    putBall (ball) {
+
+        this._haveBall   = ball.haveBall;
+        this._colorIndex = ball.colorIndex;
     }
 
     get col () {
@@ -19,11 +57,6 @@ class Cell {
     get row () {
 
         return this._row;
-    }
-
-    get value () {
-
-        return this._value;
     }
 
     get visited () {
@@ -41,19 +74,14 @@ class Cell {
         this._row = cellRow;
     }
 
-    set value (val) {
-
-        this._value = val;
-    }
-
     set visited (vis) {
 
         this._visited = vis;
     }
 
-    isFree () {
+    get isFree () {
 
-        return (this._value === 0);
+        return (!this._haveBall);
     }
 
     get pathFrom () {
@@ -64,11 +92,6 @@ class Cell {
     set pathFrom (cell) {
 
         this._pathFrom = cell;
-    }
-
-    clearValue () {
-
-        this._value = 0;
     }
  };
 class GameArea  {
@@ -87,6 +110,8 @@ class GameArea  {
             for (let row = 0; row < this._rows; ++row)
                 this._cells [col][row] = new Cell  (col, row);
         }
+
+        this._upcomingCells = new Set ();
     };
 
     cols () {
@@ -117,13 +142,8 @@ class GameArea  {
 
         for (let cell of cells) {
 
-            cell.clearValue ();
+            cell.clear ();
         }
-    }
-
-    set onDrawCallback (cb) {
-
-        this._onDrawCallback = cb;
     }
 
     randomInt (minVal, maxVal) {
@@ -144,7 +164,7 @@ class GameArea  {
 
             for (let j = 0; j < this._rows; ++j) {
 
-                if (this._cells [i][j].isFree ())
+                if (this._cells [i][j].isFree)
                     res.push (this._cells [i][j]);
             }
         }
@@ -154,7 +174,7 @@ class GameArea  {
     pushUnvisitedFreeCell (col, row, res) {
 
         const cell = this.cells (col, row);
-        if (this.isInArea (col, row) && cell.isFree () && !cell.visited) {
+        if (this.isInArea (col, row) && cell.isFree && !cell.visited) {
             res.push (cell);
         }
     }
@@ -221,21 +241,58 @@ class GameArea  {
 
     distribute (count) {
 
-        console.log ("distribute");
         let free_cells = this.getFreeCells ();
         count = Math.min (count, free_cells.length);
         let res = new Array ();
 
         for (let i = 0; i < count; ++i) {
 
-            let cell_index = this.randomInt (0, free_cells.length - 1);
-            let cell_type  = this.randomInt (1, this._typeCount);
-            let cell       = free_cells [cell_index];
-            cell.value     = cell_type;
+            let cell_index  = this.randomInt (0, free_cells.length - 1);
+            let cell_type   = this.randomInt (1, this._typeCount);
+            let cell        = free_cells [cell_index];
+            cell.colorIndex = cell_type;
+            cell.haveBall   = true;
             free_cells.splice (cell_index, 1);
             res.push (cell);
         }    
         return res;
+    }
+
+    distributeWithUpcoming (count) {
+
+        let res = new Array ();
+
+        let not_placed_count = 0;
+
+        for (let cell of this._upcomingCells) {
+
+            if (cell.haveBall)
+                ++not_placed_count;
+            else {   
+                
+                cell.haveBall = true;
+                res.push (cell);
+            }
+        }
+        res.concat (res, this.distribute (not_placed_count));
+
+        this._upcomingCells.clear ();
+
+        let free_cells = this.getFreeCells ();
+        count = Math.min (count, free_cells.length);
+
+        for (let i = 0; i < count; ++i) {
+
+            let cell_index  = this.randomInt (0, free_cells.length - 1);
+            let cell_type   = this.randomInt (1, this._typeCount);
+            let cell        = free_cells [cell_index];
+            cell.colorIndex = cell_type;
+            free_cells.splice (cell_index, 1);
+            this._upcomingCells.add (cell);
+        }    
+        return res;
+
+
     }
 
     getColorLines (cell) {
@@ -274,14 +331,14 @@ class GameArea  {
         if (!this.isInArea (col, row))
             return res;            
         const val    = cell.value;
-        let next_val = this.cellValue (col, row);       
+        let next_ball = this.cells (col, row);       
 
-        while (next_val === val && this.isInArea (col, row)) {
+        while (cell.sameBall (next_ball) && this.isInArea (col, row)) {
 
             res.push (this.cells (col, row));
             col += colInc;
             row += rowInc;        
-            next_val = this.cellValue (col, row);
+            next_ball = this.cells (col, row);
         }    
         return res;
     }

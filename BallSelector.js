@@ -1,30 +1,16 @@
 
-
-function delay (ms) {
-    return new Promise (resolve => setTimeout (resolve, ms));
-}
-
 class BallSelector {
 
     constructor (gameArea, presenter) {
 
         this._gameArea  = gameArea;
         this._presenter = presenter;
-        this._moveAnimation    = new MoveAnimation        (this._gameArea, this.onMoveStep.bind    (this));  
         this._selected  = undefined;
     }
 
-    isAnimationRunning () {
+     onCellClicked (cell) {
 
-        return (this._moveAnimation.isRunning);
-    }
-
-    onCellClicked (cell) {
-
-        if (this.isAnimationRunning ())
-            return;
-
-        if (!cell.isFree ()) {
+         if (!cell.isFree) {
          
             this._selected = cell;
             this._presenter.animateSelected (this._selected);
@@ -66,33 +52,31 @@ class BallSelector {
 
         this._presenter.stopAnimateSelected ();
 
-        let end_cell = path [path.length - 1];
-
         await this._presenter.animateMove (path);  
                 
-        end_cell.value = this._selected.value;
-        this._selected.clearValue ();
+        cell.putBall (this._selected);
+        this._selected.clear ();
 
         console.log ("move Finished");
         let lines = this._gameArea.getColorLines (cell);
         if (lines.length === 0) {
 
-            await this.distributeBalls (3);         
-
+            await this.distributeBalls (3);                  
         } else {
 
             await this._presenter.animateDestroy (lines);
             this._gameArea.clearCells (lines);
-        }
+        }       
         this.reset ();       
+        this._presenter.draw (); 
     }
 
     async distributeBalls (count) {
 
-        let cells = this._gameArea.distribute (count);
+        let cells = this._gameArea.distributeWithUpcoming (count);
         for (let cell of cells) {
 
-            if (!cell.isFree ()) {
+            if (!cell.isFree) {
 
                 let lines = this._gameArea.getColorLines (cell);
                 if (lines.length > 0) {
@@ -101,23 +85,12 @@ class BallSelector {
                     this._gameArea.clearCells (lines);        
                 }
             }
-        }
-        this._presenter.draw ();
+        }       
     }
-
-    onMoveStep () {
-
-        this._presenter.draw ();
-    }
-
+    
     deleteColorLines (cell) {
 
         let lines = this._gameArea.getColorLines (cell);
         this._destroyAnimation.run (lines);
-    }
-   
-    onDestroyStep () {
-
-        this._presenter.draw ();
-    }
+    }   
 }

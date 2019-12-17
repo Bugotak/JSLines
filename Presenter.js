@@ -255,12 +255,21 @@ class Presenter {
             for (let j = 0; j < this._gameArea.rows (); ++j) {               
 
                 const cell = this._gameArea.cells (i, j);
-                if (cell.value > 0 && !this._ballSelector.isSelected (cell)) {
+                if (cell.haveBall && !this._ballSelector.isSelected (cell)) {
 
                     this.drawBallAt (cell);
+
+                } else if (cell.colorIndex > 0) {
+
+                    this.drawBallAt (cell, 0, 0, this._ballRadius / 3);
                 }
             }
         }
+    }
+
+    ballColor (cell) {
+
+        return this._ballColors [cell.colorIndex - 1];
     }
 
     drawBallAt (cell, ...params) {
@@ -283,9 +292,10 @@ class Presenter {
         if (r < 0)
             r = 0;
 
+        let color =             
         this._context.beginPath ();
         this._context.arc (x, y, r, 0, 2 * Math.PI);
-        this._context.fillStyle = this._ballColors [cell.value - 1];
+        this._context.fillStyle = this.ballColor (cell);
         this._context.fill ();
 
         // let grad = this._context.createRadialGradient (x + 20, y - 20, 0, x + 20, y - 20, 20);
