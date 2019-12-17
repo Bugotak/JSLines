@@ -4,82 +4,6 @@ function delay (ms) {
     return new Promise (resolve => setTimeout (resolve, ms));
 }
 
-class MoveAnimation {
-
-    constructor (gameArea, onSingleStep) {
-
-        this._gameArea     = gameArea;
-        this._delay        = 50;
-        this._onSingleStep = onSingleStep;
-        this._isRunning    = false;
-    }
-
-    async singleStep () {
-        
-        await delay (this._delay);
-
-        this._to = this._path.shift ();
-        this._to.value = this._from.value;
-        this._from.clearValue ();        
-
-        this._onSingleStep ();
-
-        this._from = this._to;        
-    }
-
-    async run (path) {
-
-        this._isRunning = true;
-        this._path  = path;
-        this._from  = this._path.shift ();
-
-        while (this._path.length > 0) {
-            
-            await this.singleStep ();       
-        } 
-        this._isRunning = false;
-    }
-
-    get isRunning () {
-
-        return this._isRunning;
-    }
-}
-
-class LineDestroyAnimation {
-
-    constructor (gameArea, onSingleStep) {
-
-        this._gameArea = gameArea;  
-        this._delay        = 50;
-        this._onSingleStep = onSingleStep;
-        this._isRunning    = false;      
-    }
-
-    async singleStep () {
-      
-        await delay (this._delay);
-
-        let ball = this._lines.shift ();
-        ball.clearValue ();        
-        this._onSingleStep ();
-    }
-
-    async run (lines) {
-
-        this._isRunning = true;
-        this._lines = lines;
-        while (this._lines.length > 0)
-            await this.singleStep ();
-        this._isRunning = false;
-    }
-
-    get isRunning () {
-
-        return this._isRunning;
-    }
-}
-
 class BallSelector {
 
     constructor (gameArea, presenter) {
@@ -87,13 +11,12 @@ class BallSelector {
         this._gameArea  = gameArea;
         this._presenter = presenter;
         this._moveAnimation    = new MoveAnimation        (this._gameArea, this.onMoveStep.bind    (this));  
-        this._destroyAnimation = new LineDestroyAnimation (this._gameArea, this.onDestroyStep.bind (this));           
         this._selected  = undefined;
     }
 
     isAnimationRunning () {
 
-        return (this._moveAnimation.isRunning || this._destroyAnimation.isRunning);
+        return (this._moveAnimation.isRunning);
     }
 
     onCellClicked (cell) {
@@ -137,23 +60,49 @@ class BallSelector {
 
     async moveBallTo (cell) {
 
-        this._presenter.stopAnimateSelected ();
-        
         let path = this._gameArea.getPath (this._selected, cell); 
-        await this._moveAnimation.run (path);  
+        if (path.length === 0)
+            return;
+
+        this._presenter.stopAnimateSelected ();
+
+        let end_cell = path [path.length - 1];
+
+        await this._presenter.animateMove (path);  
+                
+        end_cell.value = this._selected.value;
+        this._selected.clearValue ();
+
+        console.log ("move Finished");
         let lines = this._gameArea.getColorLines (cell);
-        await this._destroyAnimation.run (lines);
-        let new_balls = this._gameArea.distribute (3);     
+        if (lines.length === 0) {
 
+            await this.distributeBalls (3);         
+
+        } else {
+
+            await this._presenter.animateDestroy (lines);
+            this._gameArea.clearCells (lines);
+        }
+        this.reset ();       
+    }
+
+    async distributeBalls (count) {
+
+        let cells = this._gameArea.distribute (count);
+        for (let cell of cells) {
+
+            if (!cell.isFree ()) {
+
+                let lines = this._gameArea.getColorLines (cell);
+                if (lines.length > 0) {
+
+                    await this._presenter.animateDestroy (lines);
+                    this._gameArea.clearCells (lines);        
+                }
+            }
+        }
         this._presenter.draw ();
-
-        for (let ball of new_balls) {
-
-            lines = this._gameArea.getColorLines (ball);
-            await this._destroyAnimation.run (lines);    
-        }  
-        this._presenter.draw (); 
-        this.reset ();
     }
 
     onMoveStep () {

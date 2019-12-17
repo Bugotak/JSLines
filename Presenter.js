@@ -19,28 +19,41 @@ class SelectedAnimation {
     }    
 
     run (cell) {
+        
+        if (cell == null) {
 
-        if (cell != this._cell)
-            this.stop ();
-
-        if (cell == null)
+            stop ();
             return;
+        }
 
+        if (cell == this._cell) {
+   
+            return;
+        }
+
+        if (this._cell != null) {
+
+            this._presenter.clearCell  (this._cell);
+            this._presenter.drawBallAt (this._cell);
+        }
+        stop ();
         this._cell = cell;
 
         let rect   = this._presenter.getCellRect (this._cell);
                
-        this._maxShift = rect.height / 2 - this._presenter.ballRadius;
-        this._timer    = setInterval (this.stepShift.bind (this), 50);
+        this._maxShift = rect.height / 2 - this._presenter.ballRadius - 1;
+        clearInterval (this._timer);
+        this._timer    = setInterval (this.stepShift.bind (this), 100);
     }
 
     stop () {
 
+        clearInterval (this._timer);
         this._cell = null;
         this.shift = 0;
         this._maxShift  = 0;
         this._shiftInc  = 1;
-        clearInterval (this._timer);
+       
     }
 
     stepShift () {
@@ -61,12 +74,105 @@ class SelectedAnimation {
 }
 
 
+class DestroyAnimation {
+
+    constructor (presenter) {
+
+        this._presenter = presenter;
+        this._isRunning = false;
+    }
+
+    async run (cells) {
+
+        this._isRunning = true;
+        const promises = cells.map (this.animateBall.bind (this));
+        await Promise.all (promises);
+        this._isRunning = false;
+    }
+
+    async animateBall (cell) {
+
+        let r = this._presenter.ballRadius;
+        
+        while (r >= 0) {
+            r -= 1;
+            this._presenter.clearCell  (cell);
+            this._presenter.drawBallAt (cell, 0, 0, r);
+            await delay (5);
+        }        
+    }
+
+    get isRunning () {
+
+        return this._isRunning;
+    }
+}
+
+
+class MoveAnimation {
+
+    constructor (presenter) {
+
+        this._presenter    = presenter;
+        this._delay        = 50;
+        this._isRunning    = false;
+        this._startCell    = null;
+        this._totalDx      = 0;
+        this._totalDy      = 0;
+    }
+
+    async run (path) {
+
+        if (path.length <= 1)
+            return;
+        this._path = path;
+        this._isRunning = true;
+        this._startCell = this._path.shift ();
+        
+        let from = this._startCell;
+
+        do {                
+        
+            let to   = this._path.shift ();
+            await this.moveBetween (from, to);
+            from = to;
+
+        } while (this._path.length > 0)
+
+        this._startCell    = null;
+        this._totalDx      = 0;
+        this._totalDy      = 0;
+        this._isRunning = false;
+    }
+
+    async moveBetween (from, to) {
+
+        let from_rect = this._presenter.getCellRect (from);
+        let to_rect   = this._presenter.getCellRect (to);
+
+        this._totalDx += (to_rect.x0 - from_rect.x0);
+        this._totalDy += (to_rect.y0 - from_rect.y0);
+        
+        this._presenter.clearCell  (from);
+        this._presenter.drawBallAt (this._startCell, this._totalDx, this._totalDy);
+        await delay (this._delay);
+    } 
+
+    get isRunning () {
+
+        return this._isRunning;
+    }
+}
+
+
 class Presenter {
 
     constructor (canvasID, gameArea) {
 
         this._ballSelector      = new BallSelector  (gameArea, this);
         this._selectedAnimation = new SelectedAnimation (this); 
+        this._destroyAnimation  = new DestroyAnimation  (this);
+        this._moveAnimation     = new MoveAnimation     (this);
         this._lineWidth  = 1;
 
         this._gridColor  = "#000000";
@@ -157,23 +263,36 @@ class Presenter {
         }
     }
 
-    drawBallAt (cell, ...shift) {
+    drawBallAt (cell, ...params) {
       
         let x = this._cellWidth  * (cell.col + 0.5);
         let y = this._cellHeight * (cell.row + 0.5);
-        if (shift.length >= 2) {
+        let r = this._ballRadius;
 
-            x += shift [0];
-            y += shift [1];
+        if (params.length >= 2) {
+
+            x += params [0];
+            y += params [1];
         }
 
-        this._context.strokeStyle = this._ballColors [cell.value - 1];
-        this._context.lineWidth   = 1;
+        if (params.length >= 3) {
+
+            r = params [2];
+        }
+
+        if (r < 0)
+            r = 0;
 
         this._context.beginPath ();
-        this._context.arc (x, y, this._ballRadius, 0, 2 * Math.PI);
-        this._context.fillStyle   = this._ballColors [cell.value - 1];
+        this._context.arc (x, y, r, 0, 2 * Math.PI);
+        this._context.fillStyle = this._ballColors [cell.value - 1];
         this._context.fill ();
+
+        // let grad = this._context.createRadialGradient (x + 20, y - 20, 0, x + 20, y - 20, 20);
+        // grad.addColorStop (0, this._bgColor);
+        // grad.addColorStop (1, this._ballColors [cell.value - 1]);
+        // this._context.fillStyle = grad;
+        // this._context.arc (x + 20, y - 20, 20, 0, 2 * Math.PI);
     } 
 
     clearCell (cell) {
@@ -209,9 +328,16 @@ class Presenter {
 
     onCanvasClick (event) {
 
-        console.log (event);
+        if (this.isAnimationRunning)
+            return;
+
         const cell = this.getCellAt (event.layerX, event.layerY);
         this._ballSelector.onCellClicked (cell);    
+    }
+
+    get isAnimationRunning () {
+
+        return this._destroyAnimation.isRunning;
     }
 
     animateSelected (cell) {
@@ -223,4 +349,14 @@ class Presenter {
 
         this._selectedAnimation.stop ();
     }    
+
+    async animateDestroy (lines) {
+
+        await this._destroyAnimation.run (lines);
+    }
+
+    async animateMove (path) {
+
+        await this._moveAnimation.run (path);
+    }
 }

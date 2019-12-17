@@ -113,6 +113,14 @@ class GameArea  {
         return null;
     }
 
+    clearCells (cells) {
+
+        for (let cell of cells) {
+
+            cell.clearValue ();
+        }
+    }
+
     set onDrawCallback (cb) {
 
         this._onDrawCallback = cb;
@@ -213,6 +221,7 @@ class GameArea  {
 
     distribute (count) {
 
+        console.log ("distribute");
         let free_cells = this.getFreeCells ();
         count = Math.min (count, free_cells.length);
         let res = new Array ();
