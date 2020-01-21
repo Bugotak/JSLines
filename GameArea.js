@@ -8,45 +8,61 @@ class Cell {
         this._row       = row;
         this._visited   = false;
         this._pathFrom  = undefined;
-        this.haveBall   = false;
-        this.colorIndex = 0;
+        this._ballColor = 0;
+        this._nextColor = 0;
     }
 
-    get haveBall () {
+    get ballColor () {
 
-        return this._haveBall;
+        return this._ballColor;
     }
 
-    set haveBall (have) {
+    set ballColor (newColor) {
 
-        this._haveBall = have;
+        this._ballColor = newColor;
     }
 
-    get colorIndex () {
+    get nextColor () {
 
-        return this._colorIndex;
+        return this._nextColor;
     }
 
-    set colorIndex (index) {
+    set nextColor (newColor) {
 
-        this._colorIndex = index;
+        this._nextColor = newColor;
+    }
+
+    applyNextColor () {
+
+        if (this.nextColor > 0 && this._ballColor === 0) {
+
+            this.ballColor = this.nextColor;
+            this.nextColor = 0;
+            return true;
+        }
+        return false;
     }
 
     sameBall (cell) {
 
-        return (cell != null && this.haveBall === cell.haveBall && this.colorIndex === cell.colorIndex);
+        return (cell != null && !this.isFree && this.ballColor === cell.ballColor);
     }
 
-    clear () {
+    reset () {
 
-        this._haveBall   = false;
-        this._colorIndex = 0;
+        this.ballColor = 0;
+        this.nextColor = 0;
     }
 
     putBall (ball) {
 
-        this._haveBall   = ball.haveBall;
-        this._colorIndex = ball.colorIndex;
+        this.ballColor = ball.ballColor;        
+        this.nextColor = 0;
+    }
+
+    removeBall () {
+
+        this.ballColor = 0;
     }
 
     get col () {
@@ -81,7 +97,7 @@ class Cell {
 
     get isFree () {
 
-        return (!this._haveBall);
+        return (!this.ballColor > 0);
     }
 
     get pathFrom () {
@@ -111,7 +127,7 @@ class GameArea  {
                 this._cells [col][row] = new Cell  (col, row);
         }
 
-        this._upcomingCells = new Set ();
+        this._nextBalls = new Array ();
     };
 
     cols () {
@@ -124,14 +140,7 @@ class GameArea  {
         return this._rows;
     }
 
-    cellValue (col, row) {
-
-        if (col >= 0 && col < this._cols && row >= 0 && row < this._rows)
-            return this._cells [col][row].value;
-        return undefined;
-    }
-
-    cells (col, row) {
+   cells (col, row) {
 
         if (this.isInArea (col, row))
             return this._cells [col][row];
@@ -142,7 +151,7 @@ class GameArea  {
 
         for (let cell of cells) {
 
-            cell.clear ();
+            cell.removeBall ();
         }
     }
 
@@ -248,54 +257,55 @@ class GameArea  {
         for (let i = 0; i < count; ++i) {
 
             let cell_index  = this.randomInt (0, free_cells.length - 1);
-            let cell_type   = this.randomInt (1, this._typeCount);
+            let cell_color  = this.randomInt (1, this._typeCount);
             let cell        = free_cells [cell_index];
-            cell.colorIndex = cell_type;
-            cell.haveBall   = true;
+            cell.ballColor  = cell_color;            
             free_cells.splice (cell_index, 1);
             res.push (cell);
         }    
         return res;
     }
 
-    distributeWithUpcoming (count) {
+    distributeWithNextBalls (count) {
 
-        let res = new Array ();
+        let new_balls = this.putNextBalls ();
+        new_balls.concat (this.distribute (count - new_balls.length));
+        this.reserveNextBalls (count);
+        return new_balls;
+    }
 
-        let not_placed_count = 0;
+ 
+    reserveNextBalls (count) {
 
-        for (let cell of this._upcomingCells) {
-
-            if (cell.haveBall)
-                ++not_placed_count;
-            else {   
-                
-                cell.haveBall = true;
-                res.push (cell);
-            }
-        }
-        res.concat (res, this.distribute (not_placed_count));
-
-        this._upcomingCells.clear ();
-
+        this._nextBalls.length = 0;
         let free_cells = this.getFreeCells ();
         count = Math.min (count, free_cells.length);
-
+        
         for (let i = 0; i < count; ++i) {
 
             let cell_index  = this.randomInt (0, free_cells.length - 1);
-            let cell_type   = this.randomInt (1, this._typeCount);
+            let cell_color  = this.randomInt (1, this._typeCount);
             let cell        = free_cells [cell_index];
-            cell.colorIndex = cell_type;
+            cell.nextColor  = cell_color;            
             free_cells.splice (cell_index, 1);
-            this._upcomingCells.add (cell);
+            this._nextBalls.push   (cell);
         }    
-        return res;
-
-
     }
 
-    getColorLines (cell) {
+    putNextBalls () {
+
+        let res = new Array ();
+        for (let ball of this._nextBalls) {
+
+            if (ball.applyNextColor ()) {
+
+                res.push (ball);
+            }
+        }
+        return res;
+    }
+
+     getColorLines (cell) {
 
         let res  = new Array ();
 

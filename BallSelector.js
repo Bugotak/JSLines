@@ -55,13 +55,13 @@ class BallSelector {
         await this._presenter.animateMove (path);  
                 
         cell.putBall (this._selected);
-        this._selected.clear ();
+        this._selected.removeBall ();
 
         console.log ("move Finished");
         let lines = this._gameArea.getColorLines (cell);
         if (lines.length === 0) {
 
-            await this.distributeBalls (3);                  
+            await this.distributeBalls (2);                  
         } else {
 
             await this._presenter.animateDestroy (lines);
@@ -73,7 +73,7 @@ class BallSelector {
 
     async distributeBalls (count) {
 
-        let cells = this._gameArea.distributeWithUpcoming (count);
+        let cells = this._gameArea.distributeWithNextBalls (count);
         for (let cell of cells) {
 
             if (!cell.isFree) {

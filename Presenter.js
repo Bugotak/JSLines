@@ -191,7 +191,8 @@ class Presenter {
         this._cellHeight = this._height / this._gameArea.rows ();
         this._ballRadius = (Math.min (this._cellWidth, this._cellHeight) / 2) * 0.8;
 
-        this._gameArea.distribute (1);
+        this._gameArea.distribute (5);
+        this._gameArea.reserveNextBalls (3);
 
         this._canvas.addEventListener ("click", this.onCanvasClick.bind (this));
         this._gameArea.onDrawCallback = this.draw.bind (this);
@@ -255,11 +256,11 @@ class Presenter {
             for (let j = 0; j < this._gameArea.rows (); ++j) {               
 
                 const cell = this._gameArea.cells (i, j);
-                if (cell.haveBall && !this._ballSelector.isSelected (cell)) {
+                if (!cell.isFree && !this._ballSelector.isSelected (cell)) {
 
                     this.drawBallAt (cell);
 
-                } else if (cell.colorIndex > 0) {
+                } else if (cell.nextColor > 0) {
 
                     this.drawBallAt (cell, 0, 0, this._ballRadius / 3);
                 }
@@ -269,7 +270,9 @@ class Presenter {
 
     ballColor (cell) {
 
-        return this._ballColors [cell.colorIndex - 1];
+        if (cell.nextColor > 0)
+            return this._ballColors [cell.nextColor - 1];
+        return this._ballColors [cell.ballColor - 1];
     }
 
     drawBallAt (cell, ...params) {
@@ -292,10 +295,10 @@ class Presenter {
         if (r < 0)
             r = 0;
 
-        let color =             
+        let color = this.ballColor (cell);
         this._context.beginPath ();
         this._context.arc (x, y, r, 0, 2 * Math.PI);
-        this._context.fillStyle = this.ballColor (cell);
+        this._context.fillStyle = color;
         this._context.fill ();
 
         // let grad = this._context.createRadialGradient (x + 20, y - 20, 0, x + 20, y - 20, 20);
@@ -347,7 +350,7 @@ class Presenter {
 
     get isAnimationRunning () {
 
-        return this._destroyAnimation.isRunning;
+        return this._destroyAnimation.isRunning || this._moveAnimation.isRunning;
     }
 
     animateSelected (cell) {
