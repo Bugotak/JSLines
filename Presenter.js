@@ -109,6 +109,40 @@ class DestroyAnimation {
 }
 
 
+class NewBallsAnimation {
+   
+    constructor (presenter) {
+
+        this._presenter = presenter;
+        this._isRunning = false;
+    }
+
+    async run (cells) {
+
+        this._isRunning = true;
+        const promises = cells.map (this.animateBall.bind (this));
+        await Promise.all (promises);
+        this._isRunning = false;
+    }
+
+    async animateBall (cell) {
+
+        let r = this._presenter.ballRadius / 3;
+        
+        while (r <  this._presenter.ballRadius) {
+            r += 1;
+            
+            this._presenter.drawBallAt (cell, 0, 0, r);
+            await delay (20);
+        }        
+    }
+
+    get isRunning () {
+
+        return this._isRunning;
+    }
+}
+
 class MoveAnimation {
 
     constructor (presenter) {
@@ -134,7 +168,7 @@ class MoveAnimation {
         do {                
         
             let to   = this._path.shift ();
-            await this.moveBetween (from, to);
+            await this.moveBetween (from, to);            
             from = to;
 
         } while (this._path.length > 0)
@@ -151,9 +185,10 @@ class MoveAnimation {
         let to_rect   = this._presenter.getCellRect (to);
 
         this._totalDx += (to_rect.x0 - from_rect.x0);
-        this._totalDy += (to_rect.y0 - from_rect.y0);
+        this._totalDy += (to_rect.y0 - from_rect.y0);       
         
         this._presenter.clearCell  (from);
+        this._presenter.drawLastNextBalls ();
         this._presenter.drawBallAt (this._startCell, this._totalDx, this._totalDy);
         await delay (this._delay);
     } 
@@ -169,10 +204,10 @@ class Presenter {
 
     constructor (canvasID, gameArea) {
 
-        this._ballSelector      = new BallSelector  (gameArea, this);
         this._selectedAnimation = new SelectedAnimation (this); 
         this._destroyAnimation  = new DestroyAnimation  (this);
         this._moveAnimation     = new MoveAnimation     (this);
+        this._newBallsAnimation = new NewBallsAnimation (this); 
         this._lineWidth  = 1;
 
         this._gridColor  = "#000000";
@@ -190,15 +225,19 @@ class Presenter {
         this._cellWidth  = this._width  / this._gameArea.cols ();
         this._cellHeight = this._height / this._gameArea.rows ();
         this._ballRadius = (Math.min (this._cellWidth, this._cellHeight) / 2) * 0.8;
+        this._lastNextBalls = null;
+    }
 
-        this._gameArea.distribute (5);
-        this._gameArea.reserveNextBalls (3);
+    get canvas () {
 
-        this._canvas.addEventListener ("click", this.onCanvasClick.bind (this));
-        this._gameArea.onDrawCallback = this.draw.bind (this);
+        return this._canvas;
+    }
+
+    get context () {
+
+        return this._context;
     }
     
-
     get width () {
 
         return this._width;        
@@ -251,21 +290,34 @@ class Presenter {
 
     drawBalls () {
 
+        console.log ("drawBalls")
         for (let i = 0; i < this._gameArea.cols (); ++i) {
 
             for (let j = 0; j < this._gameArea.rows (); ++j) {               
 
                 const cell = this._gameArea.cells (i, j);
-                if (!cell.isFree && !this._ballSelector.isSelected (cell)) {
+                if (!cell.isFree) {
 
                     this.drawBallAt (cell);
 
-                } else if (cell.nextColor > 0) {
-
-                    this.drawBallAt (cell, 0, 0, this._ballRadius / 3);
-                }
+                } 
             }
         }
+    }
+
+    drawNextBalls (balls) {
+
+        for (let ball of balls) {
+
+            this.drawBallAt (ball, 0, 0, this._ballRadius / 3);
+        }      
+        this._lastNextBalls = balls;  
+    }
+
+    drawLastNextBalls () {
+
+        if (this._lastNextBalls)
+            this.drawNextBalls (this._lastNextBalls);
     }
 
     ballColor (cell) {
@@ -318,8 +370,7 @@ class Presenter {
     getCellAt (x, y) {
 
         let col = Math.floor (x / this._cellWidth);
-        let row = Math.floor (y / this._cellHeight);
-
+        let row = Math.floor (y / this._cellHeight);        
         return this._gameArea.cells (col, row);
     }
 
@@ -339,18 +390,9 @@ class Presenter {
         this.drawBalls  ();
     }
 
-    onCanvasClick (event) {
-
-        if (this.isAnimationRunning)
-            return;
-
-        const cell = this.getCellAt (event.layerX, event.layerY);
-        this._ballSelector.onCellClicked (cell);    
-    }
-
     get isAnimationRunning () {
 
-        return this._destroyAnimation.isRunning || this._moveAnimation.isRunning;
+        return this._destroyAnimation.isRunning || this._moveAnimation.isRunning || this._newBallsAnimation.isRunning;
     }
 
     animateSelected (cell) {
@@ -366,6 +408,11 @@ class Presenter {
     async animateDestroy (lines) {
 
         await this._destroyAnimation.run (lines);
+    }
+
+    async animateNewBalls (cells) {
+
+        await this._newBallsAnimation.run (cells);
     }
 
     async animateMove (path) {
