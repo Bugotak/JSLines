@@ -8,7 +8,11 @@ class JSLines {
         this._initialCount   = 5;
         this._nextBallsCount = 3;
 
-        this._gameArea  = new GameArea ();
+        this._gridCols    = 9;
+        this._grisRows    = 9;
+        this._colorsCount = 7;
+
+        this._gameArea  = new GameArea (this._gridCols, this._grisRows, this._colorsCount);
         this._presenter = new Presenter ("jslines", this._gameArea);
         this._presenter.canvas.addEventListener ("click", this.onCanvasClick.bind (this));
         this._ballsDistributor = new BallDistributor (this._gameArea, this._initialCount, this._nextBallsCount);
@@ -70,6 +74,11 @@ class JSLines {
         if (!have_line) {
 
             const new_balls = await this.distributeBalls ();
+            if (this._ballsDistributor.nextBalls.length === 0) {
+
+                this.restart ();
+                return;
+            }
             await this.checkForLines (new_balls);                                        
         }
         this._presenter.drawNextBalls   (this._ballsDistributor.nextBalls);
@@ -99,23 +108,27 @@ class JSLines {
     }
 
     async checkForLines (balls) {
-
        
-
-        let lines = new Array ();
+        let balls_to_destroy = new Set ();
         for (let ball of balls) {
 
             let line = this._gameArea.getColorLines (ball); 
-            lines.push (... line);            
+            line.forEach ((val) => {balls_to_destroy.add (val)})            
         }
-        if (lines.length > 0) {
+        if (balls_to_destroy.size > 0) {
 
-            console.log (lines.length);
-            await this._presenter.animateDestroy (lines);
-            this._gameArea.clearCells (lines);
+            console.log (balls_to_destroy.size);
+            await this._presenter.animateDestroy (Array.from (balls_to_destroy));
+            this._gameArea.clearCells (Array.from (balls_to_destroy));
             return true;
         }        
         return false;
+    }
+
+    restart () {
+
+        this._gameArea.reset ();
+        this.run ();
     }
 }
 

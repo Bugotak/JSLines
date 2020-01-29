@@ -38,6 +38,7 @@ class Cell {
     reset () {
 
         this.ballColor = 0;
+        this.visited   = false;
 
     }
 
@@ -114,6 +115,7 @@ class BallDistributor {
 
     init () {
 
+        this._nextBalls.length = 0;
         const free_cells = this._gameArea.getRandomFreeCells (this._initialCount);
         for (let cell of free_cells) {
 
@@ -169,10 +171,10 @@ class BallDistributor {
 
  class GameArea  {
 
-    constructor () {
-        this._cols      = 9;
-        this._rows      = 9;
-        this._typeCount = 7;
+    constructor (cols, rows, colorsCount) {
+        this._cols        = cols;
+        this._rows        = rows;
+        this._colorsCount = colorsCount;
         this._minLineLength = 5;
 
         this._cells     = new Array (this._cols);
@@ -352,20 +354,20 @@ class BallDistributor {
 
     getRandomColor () {
 
-        return this.randomInt (1, this._typeCount);
+        return this.randomInt (1, this._colorsCount);
     }
 
     getColorLines (cell) {
 
-        let res  = new Array ();
+        let res  = new Set ();
 
         this.getLineInDirection (cell, 1, 0,  res);
         this.getLineInDirection (cell, 0, 1,  res);
         this.getLineInDirection (cell, 1, 1,  res);
         this.getLineInDirection (cell, 1, -1, res);
 
-        if (res.length > 0) {
-            res.push (cell);
+        if (res.size > 0) {
+            res.add (cell);
         }
         return res;
     }    
@@ -375,10 +377,10 @@ class BallDistributor {
         let a = this.getSubLine (cell, colInc,   rowInc);
         let b = this.getSubLine (cell, -colInc, -rowInc);
 
-        if (a.length + b.length + 1 >= this._minLineLength) {
+        if (a.size + b.size + 1 >= this._minLineLength) {
           
-            res.push (...a);
-            res.push (...b);
+            a.forEach ((val) => { res.add (val)});
+            b.forEach ((val) => { res.add (val)});
         }
     }
 
@@ -386,7 +388,7 @@ class BallDistributor {
         
         let col = cell.col + colInc;
         let row = cell.row + rowInc;
-        let res = new Array ();
+        let res = new Set ();
 
         if (!this.isInArea (col, row))
             return res;            
@@ -395,11 +397,22 @@ class BallDistributor {
 
         while (cell.sameBall (next_ball) && this.isInArea (col, row)) {
 
-            res.push (this.cells (col, row));
+            res.add (this.cells (col, row));
             col += colInc;
             row += rowInc;        
             next_ball = this.cells (col, row);
         }    
         return res;
+    }
+
+    reset () {
+
+        for (let col in this._cells) {
+
+            for (let row in this._cells [col]) {
+
+                this._cells [col][row].reset ();
+            }
+        }
     }
 }
