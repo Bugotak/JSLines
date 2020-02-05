@@ -212,7 +212,7 @@ class Presenter {
 
         this._gridColor  = "#000000";
         this._bgColor    = "#FFFFFF";
-        this._ballColors = ["#800000", "#008000", "#000080", "#808000", "#008080", "#800080", "#4065BB"];
+        this._ballColors = ["#A00000", "#00A000", "#000080", "#A0A000", "#00A0A0", "#A000A0", "#7065BB"];
 
         this._canvas  = document.getElementById (canvasID);
         this._context = this._canvas.getContext ("2d");
