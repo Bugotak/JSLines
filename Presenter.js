@@ -352,12 +352,6 @@ class Presenter {
         this._context.arc (x, y, r, 0, 2 * Math.PI);
         this._context.fillStyle = color;
         this._context.fill ();
-
-        // let grad = this._context.createRadialGradient (x + 20, y - 20, 0, x + 20, y - 20, 20);
-        // grad.addColorStop (0, this._bgColor);
-        // grad.addColorStop (1, this._ballColors [cell.value - 1]);
-        // this._context.fillStyle = grad;
-        // this._context.arc (x + 20, y - 20, 20, 0, 2 * Math.PI);
     } 
 
     clearCell (cell) {

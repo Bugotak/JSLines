@@ -171,11 +171,11 @@ class BallDistributor {
 
  class GameArea  {
 
-    constructor (cols, rows, colorsCount) {
-        this._cols        = cols;
-        this._rows        = rows;
-        this._colorsCount = colorsCount;
-        this._minLineLength = 5;
+    constructor (cols, rows, colorsCount, minLineLength) {
+        this._cols          = cols;
+        this._rows          = rows;
+        this._colorsCount   = colorsCount;
+        this._minLineLength = minLineLength;
 
         this._cells     = new Array (this._cols);
         this._nextBalls = new Array ();
